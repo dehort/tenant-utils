@@ -5,9 +5,10 @@ import "context"
 type operationKeyType int
 
 const (
-	operationKey = iota
+	operationKey operationKeyType = iota
 )
 
+//nolint:golint,deadcode,unused
 func setOperation(ctx context.Context, operation string) context.Context {
 	return context.WithValue(ctx, operationKey, operation)
 }
