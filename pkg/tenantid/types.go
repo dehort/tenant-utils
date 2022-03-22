@@ -6,9 +6,11 @@ import (
 	"net/http"
 )
 
-// This service provides translation between tenant identifiers.
+// Provides translation between tenant identifiers.
 // Namely, it converts an org_id to EAN (EBS account number) and vice versa.
+// Both single-operation and batch variants are provided
 type Translator interface {
+	BatchTranslator
 
 	// Converts an EAN (EBS account number) to org_id
 	EANToOrgID(ctx context.Context, ean string) (orgId string, err error)
@@ -20,4 +22,20 @@ type Translator interface {
 // abstraction of http.Client
 type HttpRequestDoer interface {
 	Do(req *http.Request) (*http.Response, error)
+}
+
+// Provides translation between tenant identifiers.
+type BatchTranslator interface {
+
+	// Converts a slice of EANs (EBS account number) to org_ids
+	EANsToOrgIDs(ctx context.Context, eans []string) (results []TranslationResult, err error)
+
+	// Converts a slice of org_ids to EANs (EBS account number)
+	OrgIDsToEANs(ctx context.Context, orgIDs []string) (results []TranslationResult, err error)
+}
+
+type TranslationResult struct {
+	OrgID string
+	EAN   *string
+	Err   error
 }

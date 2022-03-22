@@ -11,7 +11,7 @@ import (
 const defaultTimeout = 10
 
 type TranslatorOption interface {
-	apply(*translatorImpl)
+	apply(*batchTranslatorImpl)
 	// Options may need to be applied in certain order (e.g. timeout-setting should be applied before an option that wraps the doer)
 	// Priority lets us have complete ordering of all options
 	// Options are applied in ascending priority (highest priority options go last)
@@ -24,7 +24,7 @@ func NewTranslator(serviceHost string, options ...TranslatorOption) Translator {
 		return options[i].Priority() < options[j].Priority()
 	})
 
-	instance := &translatorImpl{
+	batchTranslator := &batchTranslatorImpl{
 		serviceHost: serviceHost,
 		client: &http.Client{
 			Timeout: defaultTimeout * time.Second,
@@ -32,18 +32,20 @@ func NewTranslator(serviceHost string, options ...TranslatorOption) Translator {
 	}
 
 	for _, option := range options {
-		option.apply(instance)
+		option.apply(batchTranslator)
 	}
 
-	return instance
+	return &translator{
+		BatchTranslator: batchTranslator,
+	}
 }
 
 type translatorOptionImpl struct {
-	fn       func(*translatorImpl)
+	fn       func(*batchTranslatorImpl)
 	priority int
 }
 
-func (this *translatorOptionImpl) apply(impl *translatorImpl) {
+func (this *translatorOptionImpl) apply(impl *batchTranslatorImpl) {
 	this.fn(impl)
 }
 
@@ -55,7 +57,7 @@ func (this *translatorOptionImpl) Priority() int {
 // The default value of 10 seconds is used otherwise.
 func WithTimeout(timeout time.Duration) TranslatorOption {
 	return &translatorOptionImpl{
-		fn: func(impl *translatorImpl) {
+		fn: func(impl *batchTranslatorImpl) {
 			impl.client = &http.Client{
 				Timeout: timeout,
 			}
@@ -67,7 +69,7 @@ func WithTimeout(timeout time.Duration) TranslatorOption {
 // WithDoer allow a custom http.Client to be provided.
 func WithDoer(doer HttpRequestDoer) TranslatorOption {
 	return &translatorOptionImpl{
-		fn: func(impl *translatorImpl) {
+		fn: func(impl *batchTranslatorImpl) {
 			impl.client = doer
 		},
 		priority: 20,
@@ -77,7 +79,7 @@ func WithDoer(doer HttpRequestDoer) TranslatorOption {
 // WithDoerWrapper allow for the default http.Client to be wrapped by a custom decorator.
 func WithDoerWrapper(fn func(HttpRequestDoer) HttpRequestDoer) TranslatorOption {
 	return &translatorOptionImpl{
-		fn: func(impl *translatorImpl) {
+		fn: func(impl *batchTranslatorImpl) {
 			impl.client = fn(impl.client)
 		},
 		priority: 30,
@@ -92,7 +94,7 @@ func WithMetrics() TranslatorOption {
 // WithMetricsWithCustomRegisterer registers a new histogram measuring latency with the provided prometheus Registerer
 func WithMetricsWithCustomRegisterer(registerer prometheus.Registerer) TranslatorOption {
 	return &translatorOptionImpl{
-		fn: func(impl *translatorImpl) {
+		fn: func(impl *batchTranslatorImpl) {
 			observer := newHistogram()
 			registerer.MustRegister(observer)
 

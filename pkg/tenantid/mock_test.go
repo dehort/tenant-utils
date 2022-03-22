@@ -2,87 +2,53 @@ package tenantid
 
 import (
 	"context"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestOrgIDToEANLookup(t *testing.T) {
-	tests := []struct {
-		name          string
-		orgID         string
-		expectedEAN   *string
-		expectedError bool
-	}{
-		{
-			name:        "successful",
-			orgID:       "5318290",
-			expectedEAN: stringRef("901578"),
-		},
-		{
-			name:        "successful anemic",
-			orgID:       "654321",
-			expectedEAN: nil,
-		},
-		{
-			name:          "missing",
-			orgID:         "654322",
-			expectedEAN:   nil,
-			expectedError: true,
-		},
-	}
+var _ = Describe("Mock batch translator tests", func() {
+	Describe("EAN to org_id", func() {
+		It("translates multiple EANs", func() {
+			translator := NewTranslatorMock()
+			results, err := translator.EANsToOrgIDs(context.Background(), []string{"901578", "6377882", "123456"})
+			Expect(err).ToNot(HaveOccurred())
 
-	translator := NewTranslatorMock()
+			Expect(results).To(HaveLen(3))
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			ean, err := translator.OrgIDToEAN(context.Background(), test.orgID)
+			Expect(*results[0].EAN).To(Equal("901578"))
+			Expect(results[0].OrgID).To(Equal("5318290"))
+			Expect(results[0].Err).To(BeNil())
 
-			if err != nil != test.expectedError {
-				t.Fatal(err)
-			}
+			Expect(*results[1].EAN).To(Equal("6377882"))
+			Expect(results[1].OrgID).To(Equal("12900172"))
+			Expect(results[1].Err).To(BeNil())
 
-			if test.expectedEAN != nil && (ean == nil || *ean != *test.expectedEAN) {
-				t.Errorf("expected %p to equal %s", ean, *test.expectedEAN)
-			}
-
-			if test.expectedEAN == nil && ean != nil {
-				t.Errorf("expected %s to be nil", *ean)
-			}
+			Expect(*results[2].EAN).To(Equal("123456"))
+			Expect(results[2].OrgID).To(Equal(""))
+			Expect(results[2].Err).To(HaveOccurred())
 		})
-	}
-}
+	})
 
-func TestEANToOrgIDLookup(t *testing.T) {
-	tests := []struct {
-		name          string
-		ean           string
-		expectedOrgID string
-		expectedError bool
-	}{
-		{
-			name:          "successful",
-			ean:           "901578",
-			expectedOrgID: "5318290",
-		},
-		{
-			name:          "missing",
-			ean:           "654322",
-			expectedError: true,
-		},
-	}
+	Describe("org_id to EAN", func() {
+		It("translates multiple org_ids", func() {
+			translator := NewTranslatorMock()
+			results, err := translator.OrgIDsToEANs(context.Background(), []string{"5318290", "654321", "123456"})
+			Expect(err).ToNot(HaveOccurred())
 
-	translator := NewTranslatorMock()
+			Expect(results).To(HaveLen(3))
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			orgID, err := translator.EANToOrgID(context.Background(), test.ean)
+			Expect(results[0].OrgID).To(Equal("5318290"))
+			Expect(*results[0].EAN).To(Equal("901578"))
+			Expect(results[0].Err).To(BeNil())
 
-			if err != nil != test.expectedError {
-				t.Fatal(err)
-			}
+			Expect(results[1].OrgID).To(Equal("654321"))
+			Expect(results[1].EAN).To(BeNil())
+			Expect(results[1].Err).To(BeNil())
 
-			if test.expectedOrgID != orgID {
-				t.Errorf("expected %s to equal %s", orgID, test.expectedOrgID)
-			}
+			Expect(results[2].OrgID).To(Equal("123456"))
+			Expect(results[2].EAN).To(BeNil())
+			Expect(results[2].Err).To(BeNil())
 		})
-	}
-}
+	})
+})

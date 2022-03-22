@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type mockTenantIDTranslator struct {
+type mockBatchTranslator struct {
 	orgIDToEAN map[string]*string
 }
 
@@ -20,35 +20,48 @@ func NewTranslatorMock() Translator {
 		"654321":   nil,
 	}
 
-	return &mockTenantIDTranslator{
-		orgIDToEAN: orgIDToEAN,
-	}
+	return NewTranslatorMockWithMapping(orgIDToEAN)
 }
 
 // NewTranslatorMockWithMapping returns a mock implementation of translator that operates on the given mapping.
 func NewTranslatorMockWithMapping(mapping map[string]*string) Translator {
-	return &mockTenantIDTranslator{
-		orgIDToEAN: mapping,
+	return &translator{
+		BatchTranslator: &mockBatchTranslator{
+			orgIDToEAN: mapping,
+		},
 	}
 }
 
-func (this *mockTenantIDTranslator) OrgIDToEAN(ctx context.Context, orgID string) (ean *string, err error) {
-	value, ok := this.orgIDToEAN[orgID]
+func (this *mockBatchTranslator) OrgIDsToEANs(ctx context.Context, orgIDs []string) (results []TranslationResult, err error) {
+	results = make([]TranslationResult, len(orgIDs))
 
-	if ok {
-		return value, nil
+	for i, orgID := range orgIDs {
+		value := this.orgIDToEAN[orgID]
+		results[i] = newTranslationResult(orgID, value)
 	}
 
-	return nil, &TenantNotFoundError{msg: fmt.Sprintf("unknown tenant: %s", orgID)}
-
+	return
 }
 
-func (this *mockTenantIDTranslator) EANToOrgID(ctx context.Context, value string) (orgID string, err error) {
+func (this *mockBatchTranslator) EANsToOrgIDs(ctx context.Context, eans []string) (results []TranslationResult, err error) {
+	results = make([]TranslationResult, len(eans))
+
+	for i, requestedEAN := range eans {
+		results[i] = this.findByEAN(requestedEAN)
+	}
+
+	return
+}
+
+func (this *mockBatchTranslator) findByEAN(requestedEAN string) TranslationResult {
 	for orgID, ean := range this.orgIDToEAN {
-		if ean != nil && *ean == value {
-			return orgID, nil
+		if ean != nil && *ean == requestedEAN {
+			return newTranslationResult(orgID, ean)
 		}
 	}
 
-	return "", &TenantNotFoundError{msg: fmt.Sprintf("unknown tenant: %s", value)}
+	return TranslationResult{
+		EAN: stringRef(requestedEAN),
+		Err: &TenantNotFoundError{msg: fmt.Sprintf("unknown tenant: %s", requestedEAN)},
+	}
 }
