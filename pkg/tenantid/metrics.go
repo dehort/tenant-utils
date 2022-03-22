@@ -9,10 +9,15 @@ import (
 )
 
 func newHistogram() *prometheus.HistogramVec {
-	return prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	histogram := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "tenant_translator_request_duration_seconds",
 		Help: "Translator service request duration",
 	}, []string{"operation", "result"})
+
+	histogram.WithLabelValues("eans_to_org_ids", "error")
+	histogram.WithLabelValues("org_ids_to_eans", "error")
+
+	return histogram
 }
 
 type measuringHttpRequestDoer struct {
