@@ -18,6 +18,7 @@ func NewTranslatorMock() Translator {
 		"11789772": stringRef("6089719"),
 		"3340851":  stringRef("0369233"),
 		"654321":   nil,
+		"10001":    stringRef("010101"),
 	}
 
 	return NewTranslatorMockWithMapping(orgIDToEAN)
