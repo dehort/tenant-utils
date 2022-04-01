@@ -12,10 +12,12 @@ import (
 type Translator interface {
 	BatchTranslator
 
-	// Converts an EAN (EBS account number) to org_id
+	// Converts an EAN (EBS account number) to org_id.
+	// Returns TenantNotFoundError (second return value) if the EAN is not known.
 	EANToOrgID(ctx context.Context, ean string) (orgId string, err error)
 
-	// Converts an org_id to EAN (EBS account number). May return nil if the org_id belongs to an anemic tenant
+	// Converts an org_id to EAN (EBS account number).
+	// Returns nil if the org_id belongs to an anemic tenant or the org_id is not known.
 	OrgIDToEAN(ctx context.Context, orgId string) (ean *string, err error)
 }
 
@@ -34,6 +36,7 @@ type BatchTranslator interface {
 	OrgIDsToEANs(ctx context.Context, orgIDs []string) (results []TranslationResult, err error)
 }
 
+// Holds the result of tenant identifier translation
 type TranslationResult struct {
 	OrgID string
 	EAN   *string
