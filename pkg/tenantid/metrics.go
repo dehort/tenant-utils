@@ -14,8 +14,11 @@ func newHistogram() *prometheus.HistogramVec {
 		Help: "Translator service request duration",
 	}, []string{"operation", "result"})
 
-	histogram.WithLabelValues("eans_to_org_ids", "error")
-	histogram.WithLabelValues("org_ids_to_eans", "error")
+	for _, operation := range []string{"eans_to_org_ids", "org_ids_to_eans"} {
+		for _, result := range []string{"200", "error"} {
+			histogram.WithLabelValues(operation, result)
+		}
+	}
 
 	return histogram
 }
