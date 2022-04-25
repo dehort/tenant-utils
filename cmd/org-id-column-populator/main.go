@@ -23,8 +23,11 @@ func main() {
 	cmd := NewRootCommand(Log)
 	if err := cmd.Execute(); err != nil {
 		FlushLogger()
+		time.Sleep(5 * time.Second)
 		os.Exit(1)
 	}
+
+	time.Sleep(5 * time.Second)
 	FlushLogger()
 }
 
