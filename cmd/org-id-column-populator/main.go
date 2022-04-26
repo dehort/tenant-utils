@@ -19,16 +19,13 @@ import (
 )
 
 func main() {
-	InitLogger()
-	cmd := NewRootCommand(Log)
+	logger := initLogger()
+	defer flushLogger()
+	cmd := NewRootCommand(logger)
 	if err := cmd.Execute(); err != nil {
-		FlushLogger()
-		time.Sleep(5 * time.Second)
+		flushLogger()
 		os.Exit(1)
 	}
-
-	time.Sleep(5 * time.Second)
-	FlushLogger()
 }
 
 func NewRootCommand(logger *logrus.Logger) *cobra.Command {

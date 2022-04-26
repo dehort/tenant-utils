@@ -19,7 +19,7 @@ import (
 )
 
 // Log is an instance of the global logrus.Logger
-var Log *logrus.Logger
+var log *logrus.Logger
 var logLevel logrus.Level
 var initializeLogger sync.Once
 var cloudWatchHook *cloudwatch.Hook
@@ -100,7 +100,7 @@ func (f *CustomCloudwatch) Format(entry *logrus.Entry) ([]byte, error) {
 }
 
 // InitLogger initializes the logger instance
-func InitLogger() {
+func initLogger() *logrus.Logger {
 
 	initializeLogger.Do(func() {
 		hostname, _ := os.Hostname()
@@ -111,7 +111,7 @@ func InitLogger() {
 		logconfig.SetDefault("AWS_REGION", "us-east-1")
 		logconfig.SetDefault("LOG_STREAM", hostname)
 		logconfig.SetDefault("LOG_FORMAT", "text")
-		logconfig.SetDefault("LOG_BATCH_FREQUENCY", 10*time.Second)
+		logconfig.SetDefault("LOG_BATCH_FREQUENCY", 1*time.Second)
 		logconfig.AutomaticEnv()
 
 		format := logconfig.GetString("LOG_FORMAT")
@@ -149,7 +149,7 @@ func InitLogger() {
 
 		formatter := buildFormatter(format)
 
-		Log = &logrus.Logger{
+		log = &logrus.Logger{
 			Out:          os.Stdout,
 			Level:        logLevel,
 			Formatter:    formatter,
@@ -158,20 +158,22 @@ func InitLogger() {
 		}
 
 		if key != "" {
-			Log.Infof("Configuring CloudWatch logging (level=%s, group=%s, stream=%s, batchFrequency=%d)",
+			log.Infof("Configuring CloudWatch logging (level=%s, group=%s, stream=%s, batchFrequency=%d)",
 				logLevel, group, stream, batchFrequency)
 			cred := credentials.NewStaticCredentials(key, secret, "")
 			awsconf := aws.NewConfig().WithRegion(region).WithCredentials(cred)
 			cloudWatchHook, err := cloudwatch.NewBatchingHook(group, stream, awsconf, batchFrequency)
 			if err != nil {
-				Log.WithFields(logrus.Fields{"error": err}).Warn("Unable to configure CloudWatch hook")
+				log.WithFields(logrus.Fields{"error": err}).Warn("Unable to configure CloudWatch hook")
 			}
-			Log.Hooks.Add(cloudWatchHook)
+			log.Hooks.Add(cloudWatchHook)
 		}
 	})
+
+	return log
 }
 
-func FlushLogger() {
+func flushLogger() {
 	if cloudWatchHook != nil {
 		cloudWatchHook.Flush()
 	}
