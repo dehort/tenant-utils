@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# --------------------------------------------
-# Options that must be configured by app owner
-# --------------------------------------------
-#APP_NAME="receptor"  # name of app-sre "application" folder this component lives in
-#COMPONENT_NAME="receptor-gateway"  # name of app-sre "resourceTemplate" in deploy.yaml for this component
 IMAGE="quay.io/cloudservices/tenant-utils"
 
 
