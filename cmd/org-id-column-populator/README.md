@@ -65,6 +65,8 @@ Define the job within the applications deploy/clowdapp.yml:
             value: ${TENANT_TRANSLATOR_PORT}
           - name: LOG_FORMAT
             value: ${LOG_FORMAT}
+          - name: LOG_BATCH_FREQUENCY
+            value: '1'
         resources:
           limits:
             cpu: 300m
