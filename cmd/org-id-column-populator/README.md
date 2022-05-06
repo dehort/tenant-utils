@@ -55,7 +55,7 @@ Define the job within the applications deploy/clowdapp.yml:
           - -t
           - connections
           - --ean-translator-addr
-          - ${TENANT_TRANSLATOR_PROTOCOL}://${TENANT_TRANSLATOR_HOST}:${TENANT_TRANSLATOR_PORT}
+          - http://${TENANT_TRANSLATOR_HOST}:${TENANT_TRANSLATOR_PORT}
         env:
           - name: TENANT_TRANSLATOR_PROTOCOL
             value: ${TENANT_TRANSLATOR_PROTOCOL}
@@ -86,6 +86,23 @@ This job will not show up in the cronjob section or the jobs section of the Open
 Clowder will not display the job anywhere until the job is kicked off using a Clowder Job 
 Invocation (CJI).  Here is a CJI that will run the job:
 
+The `TENANT_TRANSLATOR_HOST` and `TENANT_TRANSLATOR_PORT` environment variables
+are set for the stage and prod environments through app interface.  Those environment variables are set
+for the ephemeral environments through app-interface as well, but it looks
+like they are not set correctly when the application is deployed in the ephemeral envs.
+As a result, you will need to set those environment variables manually for testing
+in the ephemeral environments:
+
+```
+- name: TENANT_TRANSLATOR_HOST
+  value: 'apicast.3scale-dev.svc.cluster.local'
+- name: TENANT_TRANSLATOR_PORT
+  value: '8892'
+```
+
+It is possible to use app-interface's gabi utility to query the stage and prod environments
+to verify the changes, etc.  The documentation for configuring gabi can be found [here](https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/docs/app-sre/sop/gabi-instances-request.md).
+
 ```
 ---
 apiVersion: cloud.redhat.com/v1alpha1
@@ -99,6 +116,9 @@ spec:
 ```
 
 To run the job, save the CJI from above to a file (deploy/run_org_id_populator.yaml) and apply it using `oc apply -f deploy/run_org_id_populator.yaml`.
+
+Unfortunately, it is not possible to manually run the job in the prod environment.  You will need to get a member
+of the dev-prod team to kick off the job for you.
 
 You can check the status of the job using the `oc get cji` command:
 
