@@ -69,7 +69,10 @@ func NewRootCommand(logger *logrus.Logger) *cobra.Command {
 
 			metricsRecorder, registry := buildMetricsRecorder(logger, prometheusPushGatewayAddr)
 
-			accountNumberTranslator := buildAccountNumberTranslator(logger, translatorServiceAddr, translatorServiceTimeout, registry)
+			accountNumberTranslator, err := buildAccountNumberTranslator(logger, translatorServiceAddr, translatorServiceTimeout, registry)
+			if err != nil {
+				logger.Fatal(err)
+			}
 
 			err = tenantconv.MapAccountToOrgId(context.Background(), db, dbTable, dbAccountColumn, dbOrgIdColumn, dbNullOrgIdPlaceholder, dbOperationTimeout, batchSize, accountNumberTranslator, metricsRecorder, logger)
 			if err != nil {
@@ -94,12 +97,14 @@ func NewRootCommand(logger *logrus.Logger) *cobra.Command {
 
 	rootCmd.Flags().BoolVarP(&clowderConfig, "read-clowder-config", "C", false, "Read db config from clowder config file")
 
-	rootCmd.Flags().IntVarP(&batchSize, "batch-size", "b", 500, "Number of accounts to retrieve from the database at once ")
+	rootCmd.Flags().IntVarP(&batchSize, "batch-size", "b", 100, "Number of accounts to retrieve from the database at once ")
 
 	rootCmd.Flags().StringVarP(&prometheusPushGatewayAddr, "prometheus-push-addr", "g", "", "Address of prometheus push gateway")
 
 	rootCmd.Flags().StringVarP(&translatorServiceAddr, "ean-translator-addr", "T", "", "Address of EAN translator service")
-	rootCmd.Flags().IntVarP(&translatorServiceTimeout, "ean-translator-timeout", "O", 10, "Timeout for calling the EAN translator service")
+	rootCmd.MarkPersistentFlagRequired("ean-translator-addr")
+
+	rootCmd.Flags().IntVarP(&translatorServiceTimeout, "ean-translator-timeout", "O", 20, "Timeout for calling the EAN translator service")
 
 	return rootCmd
 }
@@ -174,10 +179,16 @@ func readDBConfigFromClowder() (dbConnectionMetadata, error) {
 	}, nil
 }
 
-func buildAccountNumberTranslator(logger *logrus.Logger, translatorServiceAddr string, timeout int, registry *prometheus.Registry) tenantid.BatchTranslator {
+func buildAccountNumberTranslator(logger *logrus.Logger, translatorServiceAddr string, timeout int, registry *prometheus.Registry) (tenantid.BatchTranslator, error) {
+
+	if translatorServiceAddr == "test" {
+		logger.Println("Using fake EAN translator impl")
+
+		return &tenantconv.TestBatchTranslator{}, nil
+	}
 
 	if translatorServiceAddr != "" {
-		logger.Println("Using real EAN translator impl")
+		logger.Printf("Using real EAN translator impl (addr => %s)\n", translatorServiceAddr)
 
 		options := []tenantid.TranslatorOption{
 			tenantid.WithTimeout(time.Duration(timeout) * time.Second),
@@ -187,12 +198,10 @@ func buildAccountNumberTranslator(logger *logrus.Logger, translatorServiceAddr s
 			options = append(options, tenantid.WithMetricsWithCustomRegisterer(registry))
 		}
 
-		return tenantid.NewTranslator(translatorServiceAddr, options...)
+		return tenantid.NewTranslator(translatorServiceAddr, options...), nil
 	}
 
-	logger.Println("Using fake EAN translator impl")
-	return &tenantconv.TestBatchTranslator{}
-
+	return nil, fmt.Errorf("EAN translator impl not set!")
 }
 
 func buildMetricsRecorder(logger *logrus.Logger, pushGatewayAddr string) (tenantconv.MetricsRecorder, *prometheus.Registry) {

@@ -11,18 +11,19 @@ make
 The database connection details can be specified on the command line:
 
 ```
-org-id-column-populator -H localhost -p 5432 -u insights -w insights -n cloud-connector -t connections -a account -o org_id -b 1
+org-id-column-populator -H localhost -p 5432 -u insights -w insights -n cloud-connector -t connections -a account -o org_id -b 1 --ean-translator-addr "http://translation-svc:8092"
 ```
 
 Or the database connection details can be pulled from the clowder config file:
 
 ```
-ACG_CONFIG=clowder.json org-id-column-populator -C -t connections -a account -o org_id -b 1
+ACG_CONFIG=clowder.json org-id-column-populator -C -t connections -a account -o org_id -b 1 --ean-translator-addr "http://translation-svc:8092"
 ```
 
 The table name (-t), account number column name (-a), org_id column name (-o) and batch size (-b) are configurable.
 
-The`TestBatchTranslator` implementation of the BatchTranslator interface is used by default.
+The`TestBatchTranslator` implementation of the BatchTranslator interface can be used by setting the
+`--ean-translator-addr` command line option to `test`.
 To use a real instance of the BatchTranslator, set the address of the translation service
 using the `--ean-translator-addr` command line option.
 
