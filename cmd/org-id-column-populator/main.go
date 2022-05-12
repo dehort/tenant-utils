@@ -102,9 +102,16 @@ func NewRootCommand(logger *logrus.Logger) *cobra.Command {
 	rootCmd.Flags().StringVarP(&prometheusPushGatewayAddr, "prometheus-push-addr", "g", "", "Address of prometheus push gateway")
 
 	rootCmd.Flags().StringVarP(&translatorServiceAddr, "ean-translator-addr", "T", "", "Address of EAN translator service")
-	rootCmd.MarkPersistentFlagRequired("ean-translator-addr")
 
 	rootCmd.Flags().IntVarP(&translatorServiceTimeout, "ean-translator-timeout", "O", 20, "Timeout for calling the EAN translator service")
+
+	requiredOptions := []string{"db-table-name", "db-account-column-name", "db-org-id-column-name", "ean-translator-addr"}
+	for _, requiredOption := range requiredOptions {
+		err := rootCmd.MarkFlagRequired(requiredOption)
+		if err != nil {
+			logger.Fatal(err)
+		}
+	}
 
 	return rootCmd
 }
