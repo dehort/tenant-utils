@@ -58,8 +58,6 @@ Define the job within the applications deploy/clowdapp.yml:
           - --ean-translator-addr
           - http://${TENANT_TRANSLATOR_HOST}:${TENANT_TRANSLATOR_PORT}
         env:
-          - name: TENANT_TRANSLATOR_PROTOCOL
-            value: ${TENANT_TRANSLATOR_PROTOCOL}
           - name: TENANT_TRANSLATOR_HOST
             value: ${TENANT_TRANSLATOR_HOST}
           - name: TENANT_TRANSLATOR_PORT
