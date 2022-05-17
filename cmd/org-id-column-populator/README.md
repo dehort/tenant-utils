@@ -81,26 +81,32 @@ details from the clowder configuration.
 The job definition will need to be edited to use the correct table name (-t),
 account column name (-a) and org-id column name (-o).
 
-This job will not show up in the cronjob section or the jobs section of the OpenShift UI.
-Clowder will not display the job anywhere until the job is kicked off using a Clowder Job 
-Invocation (CJI).  Here is a CJI that will run the job:
-
 The `TENANT_TRANSLATOR_HOST` and `TENANT_TRANSLATOR_PORT` environment variables
-are set for the stage and prod environments through app interface.  Those environment variables are set
-for the ephemeral environments through app-interface as well, but it looks
-like they are not set correctly when the application is deployed in the ephemeral envs.
-As a result, you will need to set those environment variables manually for testing
-in the ephemeral environments:
+are set for the stage and prod environments through app interface.  However, in order
+for the variables to be populated by app-interface, the variables need to be defined as
+parameters within `parameters` section of the clowdapp.yml file (see below).
+Those environment variables are set for the ephemeral environments through app-interface
+as well, but it looks like they are not set correctly when the application is deployed
+in the ephemeral envs.  As a result, you will need to set those environment variables
+manually for testing in the ephemeral environments:
 
 ```
+parameters:
 - name: TENANT_TRANSLATOR_HOST
   value: 'apicast.3scale-dev.svc.cluster.local'
 - name: TENANT_TRANSLATOR_PORT
   value: '8892'
 ```
 
-It is possible to use app-interface's gabi utility to query the stage and prod environments
-to verify the changes, etc.  The documentation for configuring gabi can be found [here](https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/docs/app-sre/sop/gabi-instances-request.md).
+NOTE: For stage and prod environments you will need to ensure your service is listed in the
+`networkPoliciesAllow` section for 3Scale to use these APIs. This is necessary even
+if you use the translation and or migration tool.
+[Example MR](https://gitlab.cee.redhat.com/service/app-interface/-/merge_requests/36537/diffs)
+
+
+This job will not show up in the cronjob section or the jobs section of the OpenShift UI.
+Clowder will not display the job anywhere until the job is kicked off using a Clowder Job 
+Invocation (CJI).  Here is a CJI that will run the job:
 
 ```
 ---
@@ -127,3 +133,9 @@ NAME                     COMPLETED
 populate-org-id-column   true
 tester                   true
 ```
+
+
+# Verification
+
+It is possible to use app-interface's gabi utility to query the stage and prod environments
+to verify the changes, etc.  The documentation for configuring gabi can be found [here](https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/docs/app-sre/sop/gabi-instances-request.md).
