@@ -74,7 +74,7 @@ func (f *CustomCloudwatch) Format(entry *logrus.Entry) ([]byte, error) {
 		"message":     entry.Message,
 		"levelname":   entry.Level.String(),
 		"source_host": f.Hostname,
-		"app":         "cloud-connector",
+		"app":         "org-id-column-populator",
 		"caller":      entry.Caller.Func.Name(),
 	}
 
