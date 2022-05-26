@@ -158,3 +158,30 @@ Metrics produced by org-id-column-populator will be available in Prometheus unde
 
 - `org_id_column_populator_rows_updated`
 - `org_id_column_populator_unique_accounts`
+
+
+## Possible errors
+
+* Error testing connection to the database - x509: certificate relies on legacy Common Name field, use SANs instead
+
+  Starting with Go 1.17, Go will no longer use the CommonName field from the certificate as the server's
+  hostname if the certificate does not contain a Subject Alternative Name.  As a result, if the server's
+  certificate does not include a Subject Alternative Name, then the cert verification will fail.
+  The certificate used by the database must be updated to include a Subject Alternative Name.
+  The devprod team have the permission to update the certificates.
+
+* Error updating org id column in the database - exec failed pq: canceling statement due to user request
+
+  The updating of the org-id fields in the database took too long.  The `--db-operation-timeout` command line
+  option can be used to adjust the database timeout (the default is 10 seconds).
+
+* Error sending HTTP request: Post \"http://apicast.3scale-stage.svc.cluster.local:8892/internal/orgIds\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+
+  The calls to the tenant translation service took too long.
+
+  This can happen if the network policy has not been configured as described [here](#running-the-job-using-app-interface).
+
+  If the network policy has been configured correctly, then there are two possible ways to resolve this issue:
+
+  1.  reduce the batch size by using the `--batch-size` command line option (the default batch-size is 100)
+  1.  increase the tenant translator timeout by using the `--ean-translator-timeout` command line option (the default is 20 seconds)

@@ -93,7 +93,7 @@ func NewRootCommand(logger *logrus.Logger) *cobra.Command {
 	rootCmd.Flags().StringVarP(&dbAccountColumn, "db-account-column-name", "a", "account", "Account column within db table")
 	rootCmd.Flags().StringVarP(&dbOrgIdColumn, "db-org-id-column-name", "o", "org-id", "OrgID column within db table")
 	rootCmd.Flags().StringVar(&dbNullOrgIdPlaceholder, "db-null-org-id-place-holder", "", "Place holder value used in the org_id column that should be replaced with real org id")
-	rootCmd.Flags().IntVar(&dbOperationTimeout, "db-operation-timeout", 5, "Timeout for each db operation in number of seconds")
+	rootCmd.Flags().IntVar(&dbOperationTimeout, "db-operation-timeout", 10, "Timeout for each db operation in number of seconds")
 
 	rootCmd.Flags().BoolVarP(&clowderConfig, "read-clowder-config", "C", false, "Read db config from clowder config file")
 
