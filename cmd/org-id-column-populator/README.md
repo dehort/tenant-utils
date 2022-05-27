@@ -185,3 +185,11 @@ Metrics produced by org-id-column-populator will be available in Prometheus unde
 
   1.  reduce the batch size by using the `--batch-size` command line option (the default batch-size is 100)
   1.  increase the tenant translator timeout by using the `--ean-translator-timeout` command line option (the default is 20 seconds)
+
+* Skipping translation of EAN to OrgID: {OrgID: EAN:0xc00005e550 Err:Tenant not found. EAN: 123}
+
+  This is not a fatal error.  This is a warning that the translation service was not able to locate an org-id
+  that is associated with the account number (123 in the example above).  This normally happens when
+  the util hits a test account (123 appears to be a test account).
+  
+  The util will skip the account and continue processing accounts/org-ids when this error occurs.
