@@ -150,13 +150,14 @@ func buildUniqueAccountQuery(table, accountColumn, orgIdColumn blessedIdentifier
 		limitClause = fmt.Sprintf(" LIMIT %d", batchSize)
 	}
 
-	return fmt.Sprintf("SELECT %s FROM %s WHERE %s IS NOT NULL AND (%s IS NULL OR %s = %s) GROUP BY %s %s",
+	return fmt.Sprintf("SELECT %s FROM %s WHERE %s IS NOT NULL AND (%s IS NULL OR %s = %s) GROUP BY %s ORDER BY %s %s",
 		accountColumn,
 		table,
 		accountColumn,
 		orgIdColumn,
 		orgIdColumn,
 		nullOrgIdPlaceholder,
+		accountColumn,
 		accountColumn,
 		limitClause)
 }
