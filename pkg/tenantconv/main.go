@@ -57,12 +57,13 @@ func mapAccountToOrgId(ctx context.Context, database *sql.DB, table, accountColu
 		if err != nil {
 			return processedAccounts, rowsUpdated, err
 		}
-		defer statement.Close()
 
 		eans, err := readAccountsFromDatabase(ctx, database, statement, batchSize, dbOperationTimeout)
 		if err != nil {
 			return processedAccounts, rowsUpdated, err
 		}
+
+		statement.Close()
 
 		logger.Printf("Read %d unique accounts from table %s\n", len(eans), table)
 
