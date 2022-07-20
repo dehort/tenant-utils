@@ -1,6 +1,7 @@
 package tenantconv
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -41,21 +42,22 @@ func mapAccountToOrgId(ctx context.Context, database *sql.DB, table, accountColu
 	var totalAccounts int64
 	var processedAccounts int64
 	var rowsUpdated int64
+	var excludeSkippedAccounts []string
 
 	totalAccounts, err := calculateUniqueAccounts(ctx, database, table, accountColumn, orgIdColumn, nullOrgIdPlaceholder)
 	if err != nil {
 		return processedAccounts, rowsUpdated, err
 	}
 
-	statement, err := buildAccountsQuery(database, table, accountColumn, orgIdColumn, nullOrgIdPlaceholder, batchSize)
-	if err != nil {
-		return processedAccounts, rowsUpdated, err
-	}
-	defer statement.Close()
-
 	logger.Println("totalAccounts: ", totalAccounts)
 
 	for processedAccounts < totalAccounts {
+
+		statement, err := buildAccountsQuery(database, table, accountColumn, orgIdColumn, nullOrgIdPlaceholder, batchSize, excludeSkippedAccounts)
+		if err != nil {
+			return processedAccounts, rowsUpdated, err
+		}
+		defer statement.Close()
 
 		eans, err := readAccountsFromDatabase(ctx, database, statement, batchSize, dbOperationTimeout)
 		if err != nil {
@@ -81,6 +83,9 @@ func mapAccountToOrgId(ctx context.Context, database *sql.DB, table, accountColu
 
 			if skipEAN(results) {
 				logger.Printf("Skipping translation of EAN to OrgID: %+v\n", results)
+				if results.EAN != nil {
+					excludeSkippedAccounts = append(excludeSkippedAccounts, *results.EAN)
+				}
 				continue
 			}
 
@@ -107,7 +112,7 @@ func mapAccountToOrgId(ctx context.Context, database *sql.DB, table, accountColu
 
 func calculateUniqueAccounts(ctx context.Context, database *sql.DB, table, accountColumn, orgIdColumn blessedIdentifier, nullOrgIdPlaceholder blessedLiteral) (int64, error) {
 
-	uniqueAccountQuery := buildUniqueAccountQuery(table, accountColumn, orgIdColumn, nullOrgIdPlaceholder, -1)
+	uniqueAccountQuery := buildUniqueAccountQuery(table, accountColumn, orgIdColumn, nullOrgIdPlaceholder, -1, nil)
 
 	selectQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) subQuery", uniqueAccountQuery)
 
@@ -132,9 +137,9 @@ func calculateUniqueAccounts(ctx context.Context, database *sql.DB, table, accou
 	return numberOfAccounts, nil
 }
 
-func buildAccountsQuery(database *sql.DB, table, accountColumn, orgIdColumn blessedIdentifier, nullOrgIdPlaceholder blessedLiteral, batchSize int) (*sql.Stmt, error) {
+func buildAccountsQuery(database *sql.DB, table, accountColumn, orgIdColumn blessedIdentifier, nullOrgIdPlaceholder blessedLiteral, batchSize int, excludeList []string) (*sql.Stmt, error) {
 
-	uniqueAccountQuery := buildUniqueAccountQuery(table, accountColumn, orgIdColumn, nullOrgIdPlaceholder, batchSize)
+	uniqueAccountQuery := buildUniqueAccountQuery(table, accountColumn, orgIdColumn, nullOrgIdPlaceholder, batchSize, excludeList)
 
 	statement, err := database.Prepare(uniqueAccountQuery)
 	if err != nil {
@@ -144,19 +149,31 @@ func buildAccountsQuery(database *sql.DB, table, accountColumn, orgIdColumn bles
 	return statement, nil
 }
 
-func buildUniqueAccountQuery(table, accountColumn, orgIdColumn blessedIdentifier, nullOrgIdPlaceholder blessedLiteral, batchSize int) string {
+func buildUniqueAccountQuery(table, accountColumn, orgIdColumn blessedIdentifier, nullOrgIdPlaceholder blessedLiteral, batchSize int, excludeList []string) string {
 	var limitClause string
 	if batchSize > 0 {
 		limitClause = fmt.Sprintf(" LIMIT %d", batchSize)
 	}
 
-	return fmt.Sprintf("SELECT %s FROM %s WHERE %s IS NOT NULL AND (%s IS NULL OR %s = %s) GROUP BY %s ORDER BY %s %s",
+	var excludeAccountsClause string
+	if len(excludeList) > 0 {
+		var buf bytes.Buffer
+		for _, e := range excludeList {
+			fmt.Fprintf(&buf, "'%s', ", e)
+		}
+		buf.Truncate(buf.Len() - 2) // Remove trailing ", "
+
+		excludeAccountsClause = fmt.Sprintf(" AND %s NOT IN (%s)", accountColumn, buf.String())
+	}
+
+	return fmt.Sprintf("SELECT %s FROM %s WHERE %s IS NOT NULL AND (%s IS NULL OR %s = %s) %s GROUP BY %s ORDER BY %s %s",
 		accountColumn,
 		table,
 		accountColumn,
 		orgIdColumn,
 		orgIdColumn,
 		nullOrgIdPlaceholder,
+		excludeAccountsClause,
 		accountColumn,
 		accountColumn,
 		limitClause)
